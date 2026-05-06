@@ -1,13 +1,12 @@
 # Screenshots
 
-Drop screenshots in this folder and reference them from the main README.
-Recommended captures (one PNG each):
-
-- `01-vpc.png` — VPC resource map (VPC > Your VPCs > select VPC > Resource map)
-- `02-subnets.png` — Subnets list showing 2 public + 2 private across 2 AZs
-- `03-security-groups.png` — The 4 SGs with their ingress rules
-- `04-alb-targets.png` — EC2 > Target Groups > healthy targets (2/2)
-- `05-asg.png` — Auto Scaling Group with min 2 / desired 2 / max 4
-- `06-rds.png` — RDS instance status = Available, Public access = No
-- `07-frontend-ui.png` — Browser showing the Angular user list
-- `08-devtools-xhr.png` — DevTools Network tab showing XHR to the ALB DNS
+| # | Capture | Preview |
+|---|---------|---------|
+| 1 | VPC resource map | ![VPC](01-vpc.png) |
+| 2 | 2 public + 2 private subnets across 2 AZs | ![Subnets](02-subnets.png) |
+| 3 | The 4 Security Groups with their rules | ![Security Groups](03-security-groups.png) |
+| 4 | ALB target group — healthy (2/2) | ![ALB targets](04-alb-targets.png) |
+| 5 | Auto Scaling Group — min 2 / desired 2 / max 4 | ![ASG](05-asg.png) |
+| 6 | RDS Available, public access = No | ![RDS](06-rds.png) |
+| 7 | Working Angular UI | ![Frontend UI](07-frontend-ui.png) |
+| 8 | DevTools — XHR going to the ALB DNS | ![DevTools XHR](08-devtools-xhr.png) |

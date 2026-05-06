@@ -10,6 +10,10 @@ Terraform that provisions a production-style 3-tier web stack on AWS for a Node.
 
 The backend and frontend repos are cloned by EC2 user_data at boot — no manual build needed.
 
+![Working Angular frontend calling the ALB](docs/07-frontend-ui.png)
+
+> See [`docs/`](docs/) for the full deployment screenshot gallery (VPC, SGs, ALB targets, ASG, RDS, DevTools).
+
 ---
 
 ## Architecture
