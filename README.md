@@ -55,37 +55,45 @@ Wait ~3–4 min after apply finishes for the Angular build to complete on the fr
 
 ---
 
-```
-                    Internet
-                       │
-                       ▼
-              ┌────────────────┐
-              │      ALB       │  (public subnets, SG-ALB :80)
-              └────────┬───────┘
-                       │ /health, /api/*
-              ┌────────▼────────┐
-              │  Target Group   │
-              └────────┬────────┘
-                       │
-        ┌──────────────┴──────────────┐
-        ▼                             ▼
-  ┌──────────┐                 ┌──────────┐
-  │ Backend  │                 │ Backend  │   ASG min 2 / desired 2 / max 4
-  │ EC2 (TG) │                 │ EC2 (TG) │   private subnets, SG-Backend :3000
-  └────┬─────┘                 └────┬─────┘   Target Tracking @ CPU 70 %
-       │                            │
-       └──────────────┬─────────────┘
-                      ▼
-               ┌─────────────┐
-               │  RDS MySQL  │   db.t3.micro, private subnets only
-               └─────────────┘   SG-RDS :3306 (only from SG-Backend)
+## Architecture
 
-  ┌──────────────────┐
-  │ Frontend EC2     │  public subnet, SG-Frontend :80
-  │ nginx + Angular  │  user_data: git clone → ng build → /usr/share/nginx/html
-  │ runtime env.js   │  apiUrl points at the ALB DNS
-  └──────────────────┘
+```mermaid
+flowchart TB
+    user([Internet user])
+
+    subgraph VPC["VPC 10.0.0.0/16 — us-east-1"]
+        direction TB
+        IGW[(Internet Gateway)]
+
+        subgraph PUB["Public subnets (2 AZs)"]
+            ALB["Application Load Balancer<br/>SG-ALB :80"]
+            FE["Frontend EC2 (t3.small)<br/>nginx + Angular<br/>SG-Frontend :80"]
+            NAT[(NAT Gateway)]
+        end
+
+        subgraph PRI["Private subnets (2 AZs)"]
+            ASG["Auto Scaling Group<br/>min 2 / desired 2 / max 4<br/>Target Tracking @ CPU 70%"]
+            BE1["Backend EC2 #1<br/>Node.js + pm2<br/>SG-Backend :3000"]
+            BE2["Backend EC2 #2"]
+            RDS[("RDS MySQL 8.0<br/>db.t3.micro<br/>SG-RDS :3306")]
+        end
+    end
+
+    user -->|HTTP :80| IGW
+    IGW --> ALB
+    IGW --> FE
+    FE -->|/api/*| ALB
+    ALB -->|/health, /api/*| ASG
+    ASG --- BE1
+    ASG --- BE2
+    BE1 -->|MySQL| RDS
+    BE2 -->|MySQL| RDS
+    BE1 -.->|npm, GitHub| NAT
+    BE2 -.->|npm, GitHub| NAT
+    NAT --> IGW
 ```
+
+> The browser hits the **frontend EC2** for HTML/JS, then the SPA calls the **ALB** for `/api/*`. The ALB only forwards to backends in private subnets, which are the only ones allowed to talk to the **RDS**. NAT GW lets backends reach `npm` and `github.com` for bootstrap.
 
 - **VPC** `10.0.0.0/16`, 2 AZs (`us-east-1a`/`b`)
 - **Subnets** 2 public (`10.0.1.0/24`, `10.0.2.0/24`) + 2 private (`10.0.11.0/24`, `10.0.12.0/24`)
@@ -163,6 +171,31 @@ terraform destroy
 ```
 
 Always destroy at the end of a session (especially in AWS Academy) to free the budget.
+
+## Using `make` (Linux/macOS)
+
+```bash
+make help        # list all targets
+make deploy      # init + apply + show outputs
+make destroy     # tear everything down
+make plan        # preview changes
+make fmt         # format .tf files
+```
+
+## Screenshots
+
+See [docs/](docs/) for screenshot captures. Recommended:
+
+| # | What | Where |
+|---|------|-------|
+| 1 | VPC resource map | VPC → Your VPCs → Resource map |
+| 2 | 2 public + 2 private subnets across 2 AZs | VPC → Subnets |
+| 3 | The 4 Security Groups with their rules | EC2 → Security Groups |
+| 4 | Healthy targets (2/2) | EC2 → Target Groups → Health |
+| 5 | ASG configured min 2 / desired 2 / max 4 | EC2 → Auto Scaling Groups |
+| 6 | RDS Available + Public access No | RDS → Databases |
+| 7 | Working Angular UI | Browser at `frontend_url` |
+| 8 | XHR call going to ALB DNS | DevTools → Network tab |
 
 ## File map
 
