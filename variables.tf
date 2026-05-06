@@ -31,15 +31,15 @@ variable "private_subnet_cidrs" {
 
 # --- App ---
 variable "backend_repo" {
-  description = "Git URL of your backend fork (must expose GET /health)"
+  description = "Git URL of the backend repo (must expose GET /health)"
   type        = string
-  default     = "https://github.com/alaabenhmida/backend.git"
+  default     = "https://github.com/xmpp-zox/backend.git"
 }
 
 variable "frontend_dist_repo" {
-  description = "Git URL of the repo containing the Angular production build (dist/)"
+  description = "Git URL of the Angular frontend repo (built on the EC2)"
   type        = string
-  default     = "https://github.com/alaabenhmida/client.git"
+  default     = "https://github.com/xmpp-zox/client.git"
 }
 
 variable "backend_port" {
