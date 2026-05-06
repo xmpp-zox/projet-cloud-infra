@@ -6,7 +6,54 @@ Terraform project that provisions a production-style 3-tier web stack on AWS for
 > - Backend (Node.js + Express): https://github.com/xmpp-zox/backend
 > - Frontend (Angular 19): https://github.com/xmpp-zox/client
 
-## Architecture
+---
+
+## TL;DR — Run it locally in 3 steps
+
+> Tested on Windows (PowerShell 5+) and Linux/macOS (bash). The whole stack comes up in ~10 minutes.
+
+**1. Install the two CLIs and configure AWS credentials**
+
+| Tool       | Install                                                          | Verify                  |
+|------------|------------------------------------------------------------------|-------------------------|
+| Terraform  | https://developer.hashicorp.com/terraform/install                | `terraform -version`    |
+| AWS CLI v2 | https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html | `aws --version`         |
+
+Then either run `aws configure` *or* paste your AWS Academy session credentials into `~/.aws/credentials`.
+
+**2. Clone and deploy**
+
+```powershell
+# Windows / PowerShell
+git clone https://github.com/xmpp-zox/projet-cloud-infra.git
+cd projet-cloud-infra
+./deploy.ps1
+```
+
+```bash
+# Linux / macOS
+git clone https://github.com/xmpp-zox/projet-cloud-infra.git
+cd projet-cloud-infra
+chmod +x deploy.sh && ./deploy.sh
+```
+
+The script prompts for the RDS password, runs `terraform init` + `apply`, and prints the URLs.
+
+**3. Open the app**
+
+```
+terraform output frontend_url     # http://<public-ip>
+```
+
+Wait ~3–4 min after apply finishes for the Angular build to complete on the frontend EC2, then open the URL — you should see the user list rendered by Angular calling the ALB.
+
+**Tear down when done** (important — saves AWS Academy budget):
+
+```powershell
+./destroy.ps1     # or ./destroy.sh
+```
+
+---
 
 ```
                     Internet
@@ -132,6 +179,8 @@ Always destroy at the end of a session (especially in AWS Academy) to free the b
 | `user_data/backend.sh.tftpl` | Bootstraps Node.js + pm2 + clones backend |
 | `user_data/frontend.sh.tftpl` | Grows root FS, swap, installs nginx, builds Angular |
 | `outputs.tf` | URLs and IDs |
+| `deploy.ps1` / `deploy.sh` | One-command deploy helper |
+| `destroy.ps1` / `destroy.sh` | One-command tear-down helper |
 
 ## Design notes
 
