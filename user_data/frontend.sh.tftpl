@@ -1,0 +1,47 @@
+#!/bin/bash -xe
+exec > /var/log/user-data.log 2>&1
+
+# Make sure the root filesystem uses the full EBS volume (16GB)
+dnf install -y cloud-utils-growpart || true
+ROOT_DEV=$(findmnt -n -o SOURCE /)
+DISK=$(lsblk -no PKNAME "$ROOT_DEV")
+PART=$(echo "$ROOT_DEV" | grep -oE '[0-9]+$')
+growpart "/dev/$DISK" "$PART" || true
+xfs_growfs -d / || true
+
+dnf update -y
+dnf install -y nginx git
+systemctl enable --now nginx
+rm -rf /usr/share/nginx/html/*
+
+# t3.micro has only 1GB RAM; ng build OOMs without swap.
+if ! swapon --show | grep -q '/swapfile'; then
+  fallocate -l 2G /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=2048
+  chmod 600 /swapfile
+  mkswap /swapfile
+  swapon /swapfile
+  echo '/swapfile none swap sw 0 0' >> /etc/fstab
+fi
+
+# Clone the frontend repo (Angular source) and build on the box
+git clone ${frontend_repo} /tmp/fe
+cd /tmp/fe
+
+# Install Node.js for the build step
+curl -fsSL https://rpm.nodesource.com/setup_20.x | bash -
+dnf install -y nodejs
+export NODE_OPTIONS="--max-old-space-size=1536"
+npm ci || npm install
+npx --yes ng build --configuration production
+
+# Angular 17+ outputs dist/<app>/browser
+SRC_DIR=$(find dist -maxdepth 3 -type d -name browser | head -n1)
+[ -z "$SRC_DIR" ] && SRC_DIR=$(find dist -maxdepth 2 -mindepth 1 -type d | head -n1)
+cp -r "$SRC_DIR"/* /usr/share/nginx/html/
+
+# Inject ALB DNS into the runtime env file (consumed by user.service.ts)
+cat > /usr/share/nginx/html/env.js <<EOF
+window.__env = { apiUrl: "http://${alb_dns}" };
+EOF
+
+systemctl restart nginx

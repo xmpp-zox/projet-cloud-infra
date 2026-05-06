@@ -1,0 +1,25 @@
+#!/bin/bash -xe
+exec > /var/log/user-data.log 2>&1
+
+dnf update -y
+dnf install -y git nodejs
+
+cd /home/ec2-user
+git clone ${backend_repo} app
+cd app
+npm install --omit=dev
+
+cat > .env <<EOF
+USE_JSON_STORAGE=false
+DB_HOST=${db_host}
+DB_USER=${db_user}
+DB_PASSWORD=${db_password}
+DB_NAME=${db_name}
+PORT=${backend_port}
+EOF
+
+npm install -g pm2
+pm2 start index.js --name api --update-env
+pm2 save
+pm2 startup systemd -u ec2-user --hp /home/ec2-user
+chown -R ec2-user:ec2-user /home/ec2-user/app
